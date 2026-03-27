@@ -8,7 +8,7 @@ const rows = 10;
 const spacing = 50;
 
 // =========================
-// LOCAL DOTS (static, never overwritten by Firebase)
+// LOCAL DOTS (static, never overwritten)
 // =========================
 let dots = [];
 for (let r = 0; r < rows; r++) {
@@ -150,14 +150,15 @@ function drawBoard(){
         ctx.stroke();
     });
 
-    // HIGHLIGHT AVAILABLE NEIGHBORS
+    // HIGHLIGHT AVAILABLE NEIGHBORS (outline only)
     if(selectedDot){
         dots.forEach(dot => {
             if(isNeighbor(selectedDot, dot) && !lineExists(selectedDot, dot)){
                 ctx.beginPath();
-                ctx.arc(dot.x, dot.y, 7, 0, Math.PI*2);
-                ctx.fillStyle = "gold";
-                ctx.fill();
+                ctx.arc(dot.x, dot.y, 9, 0, Math.PI*2);
+                ctx.strokeStyle = "gold";
+                ctx.lineWidth = 3;
+                ctx.stroke();
             }
         });
     }
