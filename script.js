@@ -20,20 +20,24 @@ for (let r = 0; r < rows; r++) {
 }
 
 // =========================
-// GAME STATE
+// GAME STATE (Firebase synced)
 // =========================
 let lines = [];
 let triangles = [];
-let selectedDot = null;
 let currentPlayer = 1;
 let score1 = 0;
 let score2 = 0;
-let timeLeft = 15;
-let timerInterval = null;
 let outerTriangleDone = false;
 
 // =========================
-// NEIGHBOR CHECK
+// UI STATE (client-side only)
+// =========================
+let uiSelectedDot = null;
+let timeLeft = 15;
+let timerInterval = null;
+
+// =========================
+// HELPER FUNCTIONS
 // =========================
 function isNeighbor(a, b){
     let dr = b.r - a.r;
@@ -44,19 +48,12 @@ function isNeighbor(a, b){
     return false;
 }
 
-// =========================
-// LINE CHECK
-// =========================
 function lineExists(a, b){
     return lines.some(line => 
-        (line[0] === a && line[1] === b) ||
-        (line[0] === b && line[1] === a)
+        (line[0] === a && line[1] === b) || (line[0] === b && line[1] === a)
     );
 }
 
-// =========================
-// TRIANGLE CHECK
-// =========================
 function checkTriangles(){
     let gained = false;
     for(let i = 0; i < dots.length; i++){
@@ -85,9 +82,6 @@ function checkTriangles(){
     return gained;
 }
 
-// =========================
-// OUTER TRIANGLE CHECK
-// =========================
 function checkOuterTriangle(){
     for(let r = 0; r < rows - 1; r++){
         let a = dots.find(d => d.r === r && d.c === 0);
@@ -118,7 +112,7 @@ function startTimer(){
         timeLeft--;
         if(timeLeft <= 0){
             currentPlayer = currentPlayer === 1 ? 2 : 1;
-            selectedDot = null;
+            uiSelectedDot = null;
             startTimer();
         }
         drawBoard();
@@ -150,10 +144,10 @@ function drawBoard(){
         ctx.stroke();
     });
 
-    // HIGHLIGHT NEIGHBORS (outline only)
-    if(selectedDot){
+    // HIGHLIGHT NEIGHBORS
+    if(uiSelectedDot){
         dots.forEach(dot => {
-            if(isNeighbor(selectedDot, dot) && !lineExists(selectedDot, dot)){
+            if(isNeighbor(uiSelectedDot, dot) && !lineExists(uiSelectedDot, dot)){
                 ctx.beginPath();
                 ctx.arc(dot.x, dot.y, 9, 0, Math.PI*2);
                 ctx.strokeStyle = "gold";
@@ -163,7 +157,7 @@ function drawBoard(){
         });
     }
 
-    // DOTS (always on top)
+    // DOTS
     dots.forEach(dot => {
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, 5, 0, Math.PI*2);
@@ -171,7 +165,7 @@ function drawBoard(){
         ctx.fill();
     });
 
-    // UI
+    // UI TEXT
     ctx.fillStyle = "black";
     ctx.font = "16px Arial";
     ctx.fillText("Player: " + (currentPlayer === 1 ? "Blue" : "Red"), 20, 20);
@@ -191,12 +185,12 @@ canvas.addEventListener("click", function(e){
     for(let dot of dots){
         const dist = Math.hypot(dot.x - mx, dot.y - my);
         if(dist < 10){
-            if(!selectedDot){
-                selectedDot = dot;
+            if(!uiSelectedDot){
+                uiSelectedDot = dot;
                 drawBoard();
             } else {
-                if(isNeighbor(selectedDot, dot) && !lineExists(selectedDot, dot)){
-                    lines.push([selectedDot, dot]);
+                if(isNeighbor(uiSelectedDot, dot) && !lineExists(uiSelectedDot, dot)){
+                    lines.push([uiSelectedDot, dot]);
 
                     let gained = checkTriangles();
 
@@ -211,7 +205,7 @@ canvas.addEventListener("click", function(e){
 
                     startTimer();
 
-                    // do NOT clear selectedDot yet — keeps neighbor highlights visible
+                    uiSelectedDot = null; // clear after line is placed
                 }
             }
             drawBoard();
@@ -219,13 +213,16 @@ canvas.addEventListener("click", function(e){
         }
     }
 
-    // =========================
     // FIREBASE SYNC
-    // =========================
     if(typeof firebase !== "undefined"){
         const gameState = {
             lines: lines.map(line => ({a:{r:line[0].r,c:line[0].c},b:{r:line[1].r,c:line[1].c}})),
-            triangles: triangles.map(tri=>({a:{r:tri.a.r,c:tri.a.c},b:{r:tri.b.r,c:tri.b.c},c:{r:tri.c.r,c:tri.c.c},player:tri.player})),
+            triangles: triangles.map(tri => ({
+                a:{r:tri.a.r,c:tri.a.c},
+                b:{r:tri.b.r,c:tri.b.c},
+                c:{r:tri.c.r,c:tri.c.c},
+                player: tri.player
+            })),
             score1, score2, currentPlayer
         };
         firebase.database().ref("gameState").set(gameState);
