@@ -9,13 +9,13 @@ const spacing = 50;
 
 let dots = [], lines = [], triangles = [];
 let selectedDot = null;
-let currentPlayer = 1; // track whose turn
-let myPlayerNumber = 0; // 1 or 2 assigned
+let currentPlayer = 1;
+let myPlayerNumber = 0;
 let score1 = 0, score2 = 0;
 let timeLeft = 15, timerInterval = null;
 let outerTriangleDone = false;
 
-// ---------------- Firebase Setup ----------------
+// ---------------- Firebase ----------------
 const firebaseConfig = {
     apiKey: "AIzaSyA6QaoKriHYTWJw1WNMcCxRi5OxR9tKS_o",
     authDomain: "triangle-pvp-game.firebaseapp.com",
@@ -28,16 +28,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ---------------- Room Setup ----------------
+// ---------------- Room ----------------
 const roomId = prompt("Enter Room ID:");
 const roomRef = ref(db, "rooms/" + roomId);
 
-// Assign player number
+// Assign player
 async function assignPlayer() {
     const roomSnapshot = await get(roomRef);
     const roomData = roomSnapshot.val() || {};
     const players = roomData.players || {};
-
     if (!players[1]) {
         myPlayerNumber = 1;
         set(ref(db, `rooms/${roomId}/players/1`), { joined: true });
@@ -45,17 +44,17 @@ async function assignPlayer() {
         myPlayerNumber = 2;
         set(ref(db, `rooms/${roomId}/players/2`), { joined: true });
     } else {
-        alert("Room full! Join another room.");
+        alert("Room full!");
         location.reload();
     }
 }
 
-// ---------------- Create Dots ----------------
-for (let r = 0; r < rows; r++) {
-    for (let c = 0; c <= r; c++) {
+// ---------------- Dots ----------------
+for (let r=0; r<rows; r++) {
+    for (let c=0; c<=r; c++) {
         let x = canvas.width/2 - (r*spacing)/2 + c*spacing;
         let y = 60 + r*spacing;
-        dots.push({x, y, r, c});
+        dots.push({x,y,r,c});
     }
 }
 
@@ -82,7 +81,7 @@ function checkTriangles(){
         for(let j=i+1;j<dots.length;j++){
             for(let k=j+1;k<dots.length;k++){
                 let a=dots[i], b=dots[j], c=dots[k];
-                if(isNeighbor(a,b) && isNeighbor(b,c) && isNeighbor(a,c)){
+                if(isNeighbor(a,b)&&isNeighbor(b,c)&&isNeighbor(a,c)){
                     if(lineExists(a,b)&&lineExists(b,c)&&lineExists(a,c)){
                         let exists=triangles.some(t=> t.a.r===a.r && t.b.r===b.r && t.c.r===c.r && t.a.c===a.c && t.b.c===b.c && t.c.c===c.c);
                         if(!exists){
@@ -133,7 +132,7 @@ function startTimer(){
     },1000);
 }
 
-// ---------------- Draw Board ----------------
+// ---------------- Draw ----------------
 function drawBoard(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -144,7 +143,7 @@ function drawBoard(){
         ctx.lineTo(tri.b.x,tri.b.y);
         ctx.lineTo(tri.c.x,tri.c.y);
         ctx.closePath();
-        ctx.fillStyle=tri.player===1?"lightblue":"lightcoral";
+        ctx.fillStyle = tri.player===1?"lightblue":"lightcoral";
         ctx.fill();
     });
 
@@ -158,10 +157,10 @@ function drawBoard(){
         ctx.stroke();
     });
 
-    // Highlight neighbors
+    // Neighbor highlight
     if(selectedDot){
         dots.forEach(dot=>{
-            if(isNeighbor(selectedDot,dot) && !lineExists(selectedDot,dot)){
+            if(isNeighbor(selectedDot,dot)&&!lineExists(selectedDot,dot)){
                 ctx.beginPath();
                 ctx.arc(dot.x,dot.y,12,0,Math.PI*2);
                 ctx.fillStyle="rgba(255,215,0,0.3)";
@@ -191,7 +190,7 @@ function drawBoard(){
 
 // ---------------- Firebase Moves ----------------
 function sendMove(a,b){
-    push(ref(db, "rooms/"+roomId+"/moves"),{
+    push(ref(db,"rooms/"+roomId+"/moves"),{
         a:{r:a.r,c:a.c},
         b:{r:b.r,c:b.c},
         player:myPlayerNumber
@@ -214,9 +213,9 @@ onChildAdded(ref(db,"rooms/"+roomId+"/moves"),snap=>{
     }
 });
 
-// ---------------- Click Handler ----------------
+// ---------------- Click ----------------
 canvas.addEventListener("click", e=>{
-    if(currentPlayer !== myPlayerNumber) return; // only your turn
+    if(currentPlayer!==myPlayerNumber) return;
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX-rect.left;
     const my = e.clientY-rect.top;
@@ -229,7 +228,7 @@ canvas.addEventListener("click", e=>{
                     lines.push([selectedDot,dot]);
                     sendMove(selectedDot,dot);
 
-                    let gained=checkTriangles();
+                    let gained = checkTriangles();
                     if(!outerTriangleDone && checkOuterTriangle()){
                         outerTriangleDone=true;
                         if(currentPlayer===1) score1+=10; else score2+=10;
