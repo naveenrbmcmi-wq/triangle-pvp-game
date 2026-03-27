@@ -1,81 +1,36 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-  <title>T10 Triangle Game</title>
+  <title>T10 Triangle PvP Game</title>
   <link rel="stylesheet" href="style.css">
-</head>
+  <script type="module">
+    // Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
-<body>
-
-  <h1>T10 Triangle Game</h1>
-
-  <canvas id="gameCanvas" width="700" height="650"></canvas>
-
-  <!-- Firebase Scripts (compat version for simple JS) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
-  <script>
-    // 🔹 Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyA6QaoKriHYTWJw1WNMcCxRi5OxR9tKS_o",
       authDomain: "triangle-pvp-game.firebaseapp.com",
-      databaseURL: "https://triangle-pvp-game-default-rtdb.firebaseio.com/",
+      databaseURL: "https://triangle-pvp-game-default-rtdb.firebaseio.com",
       projectId: "triangle-pvp-game",
-      storageBucket: "triangle-pvp-game.firebasestorage.app",
+      storageBucket: "triangle-pvp-game.appspot.com",
       messagingSenderId: "185433129150",
-      appId: "1:185433129150:web:836e50ae6dd23c52265eef"
+      appId: "1:185433129150:web:836e50ae6dd23c52265eef",
+      measurementId: "G-DTFB5HGBQT"
     };
 
-    // 🔹 Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-    // 🔹 ROOM SYSTEM
-    const urlParams = new URLSearchParams(window.location.search);
-    let roomId = urlParams.get("room");
-
-    if (!roomId) {
-      roomId = Math.random().toString(36).substr(2, 6);
-      window.location.search = "?room=" + roomId;
-    }
-
-    const roomRef = db.ref("gameRooms/" + roomId);
-
-    // 🔹 Initialize Room Data if it doesn't exist
-    roomRef.once("value").then(snapshot => {
-      if (!snapshot.exists()) {
-        roomRef.set({
-          lines: [],
-          triangles: [],
-          currentPlayer: 1,
-          score1: 0,
-          score2: 0,
-          timer: 15
-        });
-      }
-    });
-
-    // 🔹 Listen for real-time updates
-    roomRef.on("value", snapshot => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      lines = data.lines || [];
-      triangles = data.triangles || [];
-      currentPlayer = data.currentPlayer || 1;
-      score1 = data.score1 || 0;
-      score2 = data.score2 || 0;
-      moveTimer = data.timer || 15;
-
-      drawBoard(); // your existing function to redraw the canvas
-    });
+    window.firebaseDb = database; // make globally available
+    window.firebaseRef = ref;
+    window.firebaseSet = set;
+    window.firebaseOnValue = onValue;
   </script>
-
-  <!-- Your existing game logic -->
+</head>
+<body>
+  <h1>T10 Triangle PvP Game</h1>
+  <canvas id="gameCanvas" width="700" height="650"></canvas>
   <script src="script.js"></script>
-
 </body>
-
 </html>
