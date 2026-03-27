@@ -8,7 +8,7 @@ const rows = 10;
 const spacing = 50;
 
 // =========================
-// LOCAL DOTS (static, never overwritten)
+// DOTS (static, never overwritten)
 // =========================
 let dots = [];
 for (let r = 0; r < rows; r++) {
@@ -150,7 +150,7 @@ function drawBoard(){
         ctx.stroke();
     });
 
-    // HIGHLIGHT AVAILABLE NEIGHBORS (outline only)
+    // HIGHLIGHT NEIGHBORS (outline only)
     if(selectedDot){
         dots.forEach(dot => {
             if(isNeighbor(selectedDot, dot) && !lineExists(selectedDot, dot)){
@@ -193,7 +193,7 @@ canvas.addEventListener("click", function(e){
         if(dist < 10){
             if(!selectedDot){
                 selectedDot = dot;
-                drawBoard(); // highlight neighbors
+                drawBoard();
             } else {
                 if(isNeighbor(selectedDot, dot) && !lineExists(selectedDot, dot)){
                     lines.push([selectedDot, dot]);
@@ -207,52 +207,43 @@ canvas.addEventListener("click", function(e){
                         else score2 += 10;
                     }
 
-                    // SWITCH PLAYER IF NO TRIANGLE
                     if(!gained) currentPlayer = currentPlayer === 1 ? 2 : 1;
 
                     startTimer();
+
+                    // do NOT clear selectedDot yet — keeps neighbor highlights visible
                 }
-                selectedDot = null;
-                drawBoard();
             }
+            drawBoard();
             break;
         }
     }
 
     // =========================
-    // PUSH STATE TO FIREBASE
+    // FIREBASE SYNC
     // =========================
     if(typeof firebase !== "undefined"){
         const gameState = {
-            lines: lines.map(line => ({a: {r: line[0].r, c: line[0].c}, b: {r: line[1].r, c: line[1].c}})),
-            triangles: triangles.map(tri => ({
-                a: {r: tri.a.r, c: tri.a.c},
-                b: {r: tri.b.r, c: tri.b.c},
-                c: {r: tri.c.r, c: tri.c.c},
-                player: tri.player
-            })),
-            score1,
-            score2,
-            currentPlayer
+            lines: lines.map(line => ({a:{r:line[0].r,c:line[0].c},b:{r:line[1].r,c:line[1].c}})),
+            triangles: triangles.map(tri=>({a:{r:tri.a.r,c:tri.a.c},b:{r:tri.b.r,c:tri.b.c},c:{r:tri.c.r,c:tri.c.c},player:tri.player})),
+            score1, score2, currentPlayer
         };
         firebase.database().ref("gameState").set(gameState);
     }
 });
 
 // =========================
-// FIREBASE LISTENER (fixed)
+// FIREBASE LISTENER
 // =========================
 if(typeof firebase !== "undefined"){
     firebase.database().ref("gameState").on("value", snapshot => {
         const state = snapshot.val();
         if(state){
-            // map Firebase dots in lines to actual local dot references
             lines = state.lines.map(line => [
                 dots.find(d => d.r === line.a.r && d.c === line.a.c),
                 dots.find(d => d.r === line.b.r && d.c === line.b.c)
             ]);
 
-            // map triangles too
             triangles = state.triangles.map(tri => ({
                 a: dots.find(d => d.r === tri.a.r && d.c === tri.a.c),
                 b: dots.find(d => d.r === tri.b.r && d.c === tri.b.c),
@@ -263,6 +254,7 @@ if(typeof firebase !== "undefined"){
             score1 = state.score1;
             score2 = state.score2;
             currentPlayer = state.currentPlayer;
+
             drawBoard();
         }
     });
