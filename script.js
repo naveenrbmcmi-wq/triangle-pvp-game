@@ -99,18 +99,18 @@ function checkTriangles(){
 // ------------- OUTER TRIANGLE CHECK ----------
 function checkOuterTriangle(){
     for(let r = 0; r < rows-1; r++){
-        let a = dots.find(d => d.r===r && d.c===0);
-        let b = dots.find(d => d.r===r+1 && d.c===0);
+        let a = dots.find(d=>d.r===r && d.c===0);
+        let b = dots.find(d=>d.r===r+1 && d.c===0);
         if(!lineExists(a,b)) return false;
     }
     for(let r = 0; r < rows-1; r++){
-        let a = dots.find(d => d.r===r && d.c===r);
-        let b = dots.find(d => d.r===r+1 && d.c===r+1);
+        let a = dots.find(d=>d.r===r && d.c===r);
+        let b = dots.find(d=>d.r===r+1 && d.c===r+1);
         if(!lineExists(a,b)) return false;
     }
     for(let c = 0; c < rows-1; c++){
-        let a = dots.find(d => d.r===rows-1 && d.c===c);
-        let b = dots.find(d => d.r===rows-1 && d.c===c+1);
+        let a = dots.find(d=>d.r===rows-1 && d.c===c);
+        let b = dots.find(d=>d.r===rows-1 && d.c===c+1);
         if(!lineExists(a,b)) return false;
     }
     return true;
@@ -155,19 +155,19 @@ function drawBoard(){
         ctx.stroke();
     });
 
-    // HIGHLIGHT NEIGHBORS
+    // HIGHLIGHT NEIGHBORS (semi-transparent gold)
     if(selectedDot){
         dots.forEach(dot=>{
             if(isNeighbor(selectedDot,dot) && !lineExists(selectedDot,dot)){
                 ctx.beginPath();
-                ctx.arc(dot.x,dot.y,7,0,Math.PI*2);
-                ctx.fillStyle="gold";
+                ctx.arc(dot.x,dot.y,10,0,Math.PI*2); // bigger than dot
+                ctx.fillStyle = "rgba(255,215,0,0.5)";
                 ctx.fill();
             }
         });
     }
 
-    // DOTS
+    // DOTS (draw last, always visible)
     dots.forEach(dot=>{
         ctx.beginPath();
         ctx.arc(dot.x,dot.y,5,0,Math.PI*2);
@@ -186,10 +186,10 @@ function drawBoard(){
 
 // ------------- SEND MOVE TO FIREBASE ----------
 function sendMove(dotA,dotB){
-    push(movesRef, {
-        a: {r: dotA.r, c: dotA.c},
-        b: {r: dotB.r, c: dotB.c},
-        player: currentPlayer
+    push(movesRef,{
+        a:{r:dotA.r,c:dotA.c},
+        b:{r:dotB.r,c:dotB.c},
+        player:currentPlayer
     });
 }
 
@@ -204,9 +204,8 @@ onChildAdded(movesRef, (data)=>{
         currentPlayer = move.player===1?2:1;
         checkTriangles();
 
-        // Outer triangle bonus
         if(!outerTriangleDone && checkOuterTriangle()){
-            outerTriangleDone = true;
+            outerTriangleDone=true;
             if(move.player===1) score1+=10;
             else score2+=10;
         }
