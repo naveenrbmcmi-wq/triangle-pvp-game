@@ -7,47 +7,46 @@ const ctx = canvas.getContext("2d");
 const rows = 10;
 const spacing = 50;
 
-let dots = [];
-let lines = [];
-let triangles = [];
-
-let selectedDot = null;
-let currentPlayer = 1;
-
-let score1 = 0;
-let score2 = 0;
-
-let timeLeft = 15;
-let timerInterval = null;
-
-let outerTriangleDone = false;
-
 // =========================
-// CREATE TRIANGULAR LATTICE (local always)
-if(dots.length === 0){
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c <= r; c++) {
-      let x = canvas.width/2 - (r * spacing)/2 + c * spacing;
-      let y = 60 + r * spacing;
-      dots.push({x, y, r, c});
-    }
+// LOCAL DOTS (static, never overwritten by Firebase)
+// =========================
+let dots = [];
+for (let r = 0; r < rows; r++) {
+  for (let c = 0; c <= r; c++) {
+    let x = canvas.width/2 - (r * spacing)/2 + c * spacing;
+    let y = 60 + r * spacing;
+    dots.push({x, y, r, c});
   }
 }
 
 // =========================
-// NEIGHBOR CHECK (bi-directional)
+// GAME STATE
+// =========================
+let lines = [];
+let triangles = [];
+let selectedDot = null;
+let currentPlayer = 1;
+let score1 = 0;
+let score2 = 0;
+let timeLeft = 15;
+let timerInterval = null;
+let outerTriangleDone = false;
+
+// =========================
+// NEIGHBOR CHECK
+// =========================
 function isNeighbor(a, b){
     let dr = b.r - a.r;
     let dc = b.c - a.c;
-
-    if(dr === 1 && (dc === 0 || dc === 1)) return true;   // down-left / down-right
-    if(dr === -1 && (dc === -1 || dc === 0)) return true; // up-left / up-right
-    if(dr === 0 && Math.abs(dc) === 1) return true;       // horizontal
+    if(dr === 1 && (dc === 0 || dc === 1)) return true;
+    if(dr === -1 && (dc === -1 || dc === 0)) return true;
+    if(dr === 0 && Math.abs(dc) === 1) return true;
     return false;
 }
 
 // =========================
-// CHECK IF LINE EXISTS
+// LINE CHECK
+// =========================
 function lineExists(a, b){
     return lines.some(line => 
         (line[0] === a && line[1] === b) ||
@@ -57,6 +56,7 @@ function lineExists(a, b){
 
 // =========================
 // TRIANGLE CHECK
+// =========================
 function checkTriangles(){
     let gained = false;
     for(let i = 0; i < dots.length; i++){
@@ -87,6 +87,7 @@ function checkTriangles(){
 
 // =========================
 // OUTER TRIANGLE CHECK
+// =========================
 function checkOuterTriangle(){
     for(let r = 0; r < rows - 1; r++){
         let a = dots.find(d => d.r === r && d.c === 0);
@@ -108,6 +109,7 @@ function checkOuterTriangle(){
 
 // =========================
 // TIMER
+// =========================
 function startTimer(){
     clearInterval(timerInterval);
     timeLeft = 15;
@@ -124,7 +126,8 @@ function startTimer(){
 }
 
 // =========================
-// DRAW EVERYTHING
+// DRAW BOARD
+// =========================
 function drawBoard(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -159,7 +162,7 @@ function drawBoard(){
         });
     }
 
-    // DOTS
+    // DOTS (always on top)
     dots.forEach(dot => {
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, 5, 0, Math.PI*2);
@@ -167,7 +170,7 @@ function drawBoard(){
         ctx.fill();
     });
 
-    // UI TEXT
+    // UI
     ctx.fillStyle = "black";
     ctx.font = "16px Arial";
     ctx.fillText("Player: " + (currentPlayer === 1 ? "Blue" : "Red"), 20, 20);
@@ -178,6 +181,7 @@ function drawBoard(){
 
 // =========================
 // CLICK HANDLER
+// =========================
 canvas.addEventListener("click", function(e){
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -188,9 +192,8 @@ canvas.addEventListener("click", function(e){
         if(dist < 10){
             if(!selectedDot){
                 selectedDot = dot;
-                drawBoard(); // update neighbor highlight immediately
-            }
-            else{
+                drawBoard(); // highlight neighbors
+            } else {
                 if(isNeighbor(selectedDot, dot) && !lineExists(selectedDot, dot)){
                     lines.push([selectedDot, dot]);
 
@@ -214,9 +217,41 @@ canvas.addEventListener("click", function(e){
             break;
         }
     }
+
+    // =========================
+    // PUSH STATE TO FIREBASE
+    // =========================
+    if(typeof firebase !== "undefined"){
+        const gameState = {
+            lines,
+            triangles,
+            score1,
+            score2,
+            currentPlayer
+        };
+        firebase.database().ref("gameState").set(gameState);
+    }
 });
 
 // =========================
+// FIREBASE LISTENER
+// =========================
+if(typeof firebase !== "undefined"){
+    firebase.database().ref("gameState").on("value", snapshot => {
+        const state = snapshot.val();
+        if(state){
+            lines = state.lines;
+            triangles = state.triangles;
+            score1 = state.score1;
+            score2 = state.score2;
+            currentPlayer = state.currentPlayer;
+            drawBoard();
+        }
+    });
+}
+
+// =========================
 // START GAME
+// =========================
 drawBoard();
 startTimer();
