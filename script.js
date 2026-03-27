@@ -223,8 +223,13 @@ canvas.addEventListener("click", function(e){
     // =========================
     if(typeof firebase !== "undefined"){
         const gameState = {
-            lines,
-            triangles,
+            lines: lines.map(line => ({a: {r: line[0].r, c: line[0].c}, b: {r: line[1].r, c: line[1].c}})),
+            triangles: triangles.map(tri => ({
+                a: {r: tri.a.r, c: tri.a.c},
+                b: {r: tri.b.r, c: tri.b.c},
+                c: {r: tri.c.r, c: tri.c.c},
+                player: tri.player
+            })),
             score1,
             score2,
             currentPlayer
@@ -234,14 +239,26 @@ canvas.addEventListener("click", function(e){
 });
 
 // =========================
-// FIREBASE LISTENER
+// FIREBASE LISTENER (fixed)
 // =========================
 if(typeof firebase !== "undefined"){
     firebase.database().ref("gameState").on("value", snapshot => {
         const state = snapshot.val();
         if(state){
-            lines = state.lines;
-            triangles = state.triangles;
+            // map Firebase dots in lines to actual local dot references
+            lines = state.lines.map(line => [
+                dots.find(d => d.r === line.a.r && d.c === line.a.c),
+                dots.find(d => d.r === line.b.r && d.c === line.b.c)
+            ]);
+
+            // map triangles too
+            triangles = state.triangles.map(tri => ({
+                a: dots.find(d => d.r === tri.a.r && d.c === tri.a.c),
+                b: dots.find(d => d.r === tri.b.r && d.c === tri.b.c),
+                c: dots.find(d => d.r === tri.c.r && d.c === tri.c.c),
+                player: tri.player
+            }));
+
             score1 = state.score1;
             score2 = state.score2;
             currentPlayer = state.currentPlayer;
